@@ -22,6 +22,8 @@ CODEOWNERS = ["@martgras"]
 
 AUTO_LOAD = ["modbus"]
 
+CONF_START_ADDRESS = "start_address"
+CONF_SERVER_REGISTERS = "server_registers"
 MULTI_CONF = True
 
 modbus_controller_ns = cg.esphome_ns.namespace("modbus_controller")
@@ -30,6 +32,7 @@ ModbusController = modbus_controller_ns.class_(
 )
 
 SensorItem = modbus_controller_ns.struct("SensorItem")
+ServerRegister = modbus_controller_ns.struct("ServerRegister")
 
 ModbusFunctionCode_ns = modbus_controller_ns.namespace("ModbusFunctionCode")
 ModbusFunctionCode = ModbusFunctionCode_ns.enum("ModbusFunctionCode")
@@ -93,9 +96,17 @@ TYPE_REGISTER_MAP = {
     "FP32_R": 2,
 }
 
-MULTI_CONF = True
-
 _LOGGER = logging.getLogger(__name__)
+
+ModbusServerRegisterSchema = cv.Schema(
+    {
+        cv.GenerateID(): cv.declare_id(ServerRegister),
+        cv.Required(CONF_START_ADDRESS): cv.positive_int,
+        cv.Optional(CONF_VALUE_TYPE, default="U_WORD"): cv.enum(SENSOR_VALUE_TYPE),
+        cv.Required(CONF_LAMBDA): cv.returning_lambda,
+    }
+)
+
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
@@ -104,6 +115,9 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(
                 CONF_COMMAND_THROTTLE, default="0ms"
             ): cv.positive_time_period_milliseconds,
+            cv.Optional(
+                CONF_SERVER_REGISTERS,
+            ): cv.ensure_list(ModbusServerRegisterSchema),
         }
     )
     .extend(cv.polling_component_schema("60s"))
@@ -208,6 +222,23 @@ async def add_modbus_base_properties(
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID], config[CONF_COMMAND_THROTTLE])
     cg.add(var.set_command_throttle(config[CONF_COMMAND_THROTTLE]))
+    if CONF_SERVER_REGISTERS in config:
+        for server_register in config[CONF_SERVER_REGISTERS]:
+            cg.add(
+                var.add_server_register(
+                    cg.new_Pvariable(
+                        server_register[CONF_ID],
+                        server_register[CONF_START_ADDRESS],
+                        server_register[CONF_VALUE_TYPE],
+                        TYPE_REGISTER_MAP[server_register[CONF_VALUE_TYPE]],
+                        await cg.process_lambda(
+                            server_register[CONF_LAMBDA],
+                            [],
+                            return_type=cg.float_,
+                        ),
+                    )
+                )
+            )
     await register_modbus_device(var, config)
 
 
