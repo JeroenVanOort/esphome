@@ -85,6 +85,7 @@ void ModbusController::on_modbus_read_registers(uint8_t function_code, uint16_t 
   for (uint16_t current_address = start_address; current_address < start_address + number_of_registers;) {
     ESP_LOGD(TAG, "Current register: 0x%02X.", current_address);
     bool found = false;
+    uint16_t register_count;
     for (auto *server_register : this->serverregisters_) {
       if (server_register->start_address == current_address) {
         float value = server_register->lamda();
@@ -93,10 +94,11 @@ void ModbusController::on_modbus_read_registers(uint8_t function_code, uint16_t 
                  current_address, server_register->start_address, static_cast<uint8_t>(server_register->value_type),
                  server_register->register_count, value);
         number_to_payload(sixteen_bit_response, value, server_register->value_type);
-        current_address += server_register->register_count;
+        register_count = server_register->register_count;
         found = true;
       }
     }
+    current_address += register_count;
 
     if (!found) {
       ESP_LOGW(TAG, "Could not match any register to address %02X. Sending exception response.", current_address);
