@@ -80,7 +80,7 @@ void ModbusController::on_modbus_read_registers(uint8_t function_code, uint16_t 
                                                 uint16_t number_of_registers) {
   ESP_LOGD(TAG, "Received read holding/input registers. FC: 0x%X. Start address: 0x%X. Number of registers: 0x%X.",
            function_code, start_address, number_of_registers);
-  
+
   std::vector<uint16_t> sixteen_bit_response;
   for (uint16_t current_address = start_address; current_address < start_address + number_of_registers;) {
     bool found = false;
@@ -89,8 +89,8 @@ void ModbusController::on_modbus_read_registers(uint8_t function_code, uint16_t 
       if (server_register->start_address == current_address) {
         float value = server_register->lamda();
 
-        ESP_LOGD(TAG, "Current register: 0x%02X. Matched register. Start address: 0x%02X. Value type: %zu. Register count: %u. Value: %0.1f.",
-                 current_address, server_register->start_address, static_cast<uint8_t>(server_register->value_type),
+        ESP_LOGD(TAG, "Matched register. Start address: 0x%02X. Value type: %zu. Register count: %u. Value: %0.1f.",
+                 server_register->start_address, static_cast<uint8_t>(server_register->value_type),
                  server_register->register_count, value);
         number_to_payload(sixteen_bit_response, value, server_register->value_type);
         register_count = server_register->register_count;
