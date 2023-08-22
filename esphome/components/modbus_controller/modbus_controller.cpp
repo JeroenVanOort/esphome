@@ -78,9 +78,11 @@ void ModbusController::on_modbus_error(uint8_t function_code, uint8_t exception_
 
 void ModbusController::on_modbus_read_registers(uint8_t function_code, uint16_t start_address,
                                                 uint16_t number_of_registers) {
+  ESP_LOGD(TAG, "Received read holding/input registers. FC: 0x%X. Start address: 0x%X. Number of registers: 0x%X.",
+           function_code, start_address, number_of_registers);
+  
   std::vector<uint16_t> sixteen_bit_response;
   for (uint16_t current_address = start_address; current_address < start_address + number_of_registers;) {
-    ESP_LOGD(TAG, "Current register: 0x%02X.", current_address);
     bool found = false;
     uint16_t register_count;
     for (auto *server_register : this->serverregisters_) {
